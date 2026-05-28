@@ -1,0 +1,12 @@
+# Build output
+bin/
+obj/
+*.user
+
+# IDE
+.vs/
+.idea/
+
+# Agent / session data
+.omc/
+.claude/
