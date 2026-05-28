@@ -14,6 +14,7 @@ public sealed class QuickLookService : IDisposable
     private readonly Dispatcher _dispatcher;
     private IntPtr _hook;
     private PreviewWindow? _preview;
+    private bool _spaceHeld;
 
     public QuickLookService()
     {
@@ -25,14 +26,15 @@ public sealed class QuickLookService : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0
-            && wParam.ToInt32() == NativeMethods.WM_KEYDOWN
-            && Marshal.ReadInt32(lParam) == NativeMethods.VK_SPACE)
+        if (nCode >= 0 && Marshal.ReadInt32(lParam) == NativeMethods.VK_SPACE)
         {
+            var message = wParam.ToInt32();
             try
             {
-                if (TryHandleSpace())
+                if (message == NativeMethods.WM_KEYDOWN && OnSpaceDown())
                     return new IntPtr(1); // проглотить пробел
+                if (message == NativeMethods.WM_KEYUP && OnSpaceUp())
+                    return new IntPtr(1);
             }
             catch
             {
@@ -43,34 +45,48 @@ public sealed class QuickLookService : IDisposable
         return NativeMethods.CallNextHookEx(_hook, nCode, wParam, lParam);
     }
 
-    private bool TryHandleSpace()
+    private bool OnSpaceDown()
     {
-        if (_preview is { IsVisible: true })
-        {
-            var open = _preview;
-            _preview = null;
-            _dispatcher.BeginInvoke(open.Close);
-            return true;
-        }
+        if (_spaceHeld)
+            return true; // автоповтор удержания — глотаем, превью уже открыто
 
-        var foreground = NativeMethods.GetForegroundWindow();
-        if (!IsExplorer(foreground))
+        // в самом хуке — только быстрые проверки. COM/Shell выносим в Dispatcher,
+        // иначе медленный колбэк превысит LowLevelHooksTimeout и Windows снимет хук
+        if (!IsExplorer(NativeMethods.GetForegroundWindow()))
             return false;
 
-        var path = ExplorerSelection.GetSelectedFile(foreground);
-        if (path is null)
-            return false;
-
-        _dispatcher.BeginInvoke(() => OpenPreview(path));
+        _spaceHeld = true;
+        _dispatcher.BeginInvoke(OpenFromSelection);
         return true;
     }
 
-    private void OpenPreview(string path)
+    private bool OnSpaceUp()
     {
+        if (!_spaceHeld)
+            return false;
+
+        _spaceHeld = false;
+        _dispatcher.BeginInvoke(ClosePreview);
+        return true;
+    }
+
+    private void OpenFromSelection()
+    {
+        var path = ExplorerSelection.GetSelectedFile(NativeMethods.GetForegroundWindow());
+        if (path is null)
+            return;
+
+        ClosePreview();
         _preview = new PreviewWindow(path);
         _preview.Closed += (_, _) => _preview = null;
         _preview.Show();
         _preview.Activate();
+    }
+
+    private void ClosePreview()
+    {
+        _preview?.Close();
+        _preview = null;
     }
 
     private static bool IsExplorer(IntPtr hwnd)

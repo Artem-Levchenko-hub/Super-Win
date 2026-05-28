@@ -17,6 +17,8 @@ public partial class App : Application
     private GlobalHotkeys _hotkeys = null!;
     private WindowPinner _pinner = null!;
     private QuickLookService _quicklook = null!;
+    private RecentlyClosedService _recentClosed = null!;
+    private ShelfWindow _shelf = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -39,19 +41,30 @@ public partial class App : Application
             Enabled = _settings.BubbleVisible,
         };
 
-        _tray = new TrayIcon(_settings, _store, _bubble, _watcher);
+        // полка на краю экрана (приёмник перетаскивания файлов)
+        _shelf = new ShelfWindow();
+        _shelf.Show();
+
+        _tray = new TrayIcon(_settings, _store, _bubble, _watcher, _shelf);
 
         // глобальные хоткеи: Ctrl+Alt+T — закреп окна поверх; Ctrl+Alt+O — OCR области экрана
         _hotkeys = new GlobalHotkeys();
         _pinner = new WindowPinner(_hotkeys, _tray.Notify);
         _ = new ScreenOcrService(_hotkeys, new ClipboardService(), _tray.Notify);
 
+        // Ctrl+Alt+R — исправить раскладку выделенного текста
+        _ = new LayoutFixService(_hotkeys, new SelectionCapture(), new ClipboardService(), _tray.Notify);
+
         // пробел в Проводнике на выбранном файле → мгновенное превью (Quick Look)
         _quicklook = new QuickLookService();
+
+        // Ctrl+Shift+T — открыть заново последнюю закрытую папку Проводника
+        _recentClosed = new RecentlyClosedService(_hotkeys, _tray.Notify);
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _recentClosed?.Dispose();
         _quicklook?.Dispose();
         _pinner?.Dispose();
         _hotkeys?.Dispose();

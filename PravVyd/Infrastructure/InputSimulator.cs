@@ -2,16 +2,20 @@ using System.Runtime.InteropServices;
 
 namespace PravVyd.Infrastructure;
 
-/// <summary>Синтетический ввод. Сейчас умеет одно — послать Ctrl+C активному окну.</summary>
+/// <summary>Синтетический ввод: Ctrl+C (снять выделение) и Ctrl+V (вставить).</summary>
 public static class InputSimulator
 {
-    public static void SendCtrlC()
+    public static void SendCtrlC() => SendCtrlCombo(NativeMethods.VK_C);
+
+    public static void SendCtrlV() => SendCtrlCombo(NativeMethods.VK_V);
+
+    private static void SendCtrlCombo(ushort key)
     {
         NativeMethods.INPUT[] inputs =
         {
             KeyDown(NativeMethods.VK_CONTROL),
-            KeyDown(NativeMethods.VK_C),
-            KeyUp(NativeMethods.VK_C),
+            KeyDown(key),
+            KeyUp(key),
             KeyUp(NativeMethods.VK_CONTROL),
         };
 

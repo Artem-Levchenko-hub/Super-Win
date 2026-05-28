@@ -15,6 +15,7 @@ internal static class NativeMethods
     public const uint KEYEVENTF_KEYUP = 0x0002;
     public const ushort VK_CONTROL = 0x11;
     public const ushort VK_C = 0x43;
+    public const ushort VK_V = 0x56;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct INPUT
@@ -156,9 +157,11 @@ internal static class NativeMethods
     // --- Global hotkey + закреп окна поверх всех (topmost) ---
     public const uint MOD_ALT = 0x0001;
     public const uint MOD_CONTROL = 0x0002;
+    public const uint MOD_SHIFT = 0x0004;
     public const uint MOD_NOREPEAT = 0x4000;
     public const uint VK_T = 0x54;
     public const uint VK_O = 0x4F;
+    public const uint VK_R = 0x52;
     public const int WM_HOTKEY = 0x0312;
     public static readonly IntPtr HWND_NOTOPMOST = new(-2);
 
@@ -179,6 +182,7 @@ internal static class NativeMethods
     // --- Low-level keyboard hook (Quick Look по пробелу в Проводнике) ---
     public const int WH_KEYBOARD_LL = 13;
     public const int WM_KEYDOWN = 0x0100;
+    public const int WM_KEYUP = 0x0101;
     public const int VK_SPACE = 0x20;
 
     public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);

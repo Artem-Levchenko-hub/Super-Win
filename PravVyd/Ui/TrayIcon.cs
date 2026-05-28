@@ -14,20 +14,29 @@ public sealed class TrayIcon : IDisposable
     private readonly SettingsStore _store;
     private readonly BubbleWindow _bubble;
     private readonly SelectionWatcher _watcher;
+    private readonly System.Windows.Window _shelfWindow;
 
-    public TrayIcon(AppSettings settings, SettingsStore store, BubbleWindow bubble, SelectionWatcher watcher)
+    public TrayIcon(AppSettings settings, SettingsStore store, BubbleWindow bubble, SelectionWatcher watcher, System.Windows.Window shelf)
     {
         _settings = settings;
         _store = store;
         _bubble = bubble;
         _watcher = watcher;
+        _shelfWindow = shelf;
 
         var menu = new ContextMenuStrip();
         menu.Items.Add("Включить / выключить всплывание", null, (_, _) => ToggleFeature());
+
+        var shelfItem = new ToolStripMenuItem("Полка на краю экрана") { CheckOnClick = true, Checked = true };
+        shelfItem.CheckedChanged += (_, _) => { if (shelfItem.Checked) _shelfWindow.Show(); else _shelfWindow.Hide(); };
+        menu.Items.Add(shelfItem);
+
         menu.Items.Add("Настройки…", null, (_, _) => OpenSettings());
         menu.Items.Add(new ToolStripMenuItem("Закреп поверх окон: Ctrl+Alt+T") { Enabled = false });
         menu.Items.Add(new ToolStripMenuItem("OCR области: Ctrl+Alt+O") { Enabled = false });
         menu.Items.Add(new ToolStripMenuItem("Превью файла: Пробел (в Проводнике)") { Enabled = false });
+        menu.Items.Add(new ToolStripMenuItem("Вернуть закрытую папку: Ctrl+Shift+T") { Enabled = false });
+        menu.Items.Add(new ToolStripMenuItem("Исправить раскладку: Ctrl+Alt+R") { Enabled = false });
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Выход", null, (_, _) => WpfApp.Current.Shutdown());
 

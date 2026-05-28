@@ -47,4 +47,50 @@ public static class ExplorerSelection
 
         return null;
     }
+
+    /// <summary>Все пути открытых сейчас окон Проводника.</summary>
+    public static List<string> GetOpenFolders()
+    {
+        var result = new List<string>();
+        var shellType = Type.GetTypeFromProgID("Shell.Application");
+        if (shellType is null)
+            return result;
+
+        object? shell = null;
+        try
+        {
+            shell = Activator.CreateInstance(shellType);
+            dynamic windows = ((dynamic)shell!).Windows();
+            int count = windows.Count;
+
+            for (var i = 0; i < count; i++)
+            {
+                dynamic? window = windows.Item(i);
+                if (window is null)
+                    continue;
+
+                try
+                {
+                    string path = window.Document.Folder.Self.Path;
+                    if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+                        result.Add(path);
+                }
+                catch
+                {
+                    // окно без файловой папки (Панель управления и т.п.) — пропускаем
+                }
+            }
+        }
+        catch
+        {
+            // Shell недоступен
+        }
+        finally
+        {
+            if (shell is not null)
+                Marshal.FinalReleaseComObject(shell);
+        }
+
+        return result;
+    }
 }
