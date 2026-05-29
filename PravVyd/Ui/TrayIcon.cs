@@ -14,23 +14,23 @@ public sealed class TrayIcon : IDisposable
     private readonly SettingsStore _store;
     private readonly BubbleWindow _bubble;
     private readonly SelectionWatcher _watcher;
-    private readonly System.Windows.Window _shelfWindow;
+    private readonly ShelfAutoShow _shelfAuto;
     private readonly AutoLayoutService _autoLayout;
 
-    public TrayIcon(AppSettings settings, SettingsStore store, BubbleWindow bubble, SelectionWatcher watcher, System.Windows.Window shelf, AutoLayoutService autoLayout)
+    public TrayIcon(AppSettings settings, SettingsStore store, BubbleWindow bubble, SelectionWatcher watcher, ShelfAutoShow shelfAuto, AutoLayoutService autoLayout)
     {
         _settings = settings;
         _store = store;
         _bubble = bubble;
         _watcher = watcher;
-        _shelfWindow = shelf;
+        _shelfAuto = shelfAuto;
         _autoLayout = autoLayout;
 
         var menu = new ContextMenuStrip();
         menu.Items.Add("Включить / выключить всплывание", null, (_, _) => ToggleFeature());
 
-        var shelfItem = new ToolStripMenuItem("Полка на краю экрана") { CheckOnClick = true, Checked = true };
-        shelfItem.CheckedChanged += (_, _) => { if (shelfItem.Checked) _shelfWindow.Show(); else _shelfWindow.Hide(); };
+        var shelfItem = new ToolStripMenuItem("Полка: выезжает при перетаскивании") { CheckOnClick = true, Checked = _shelfAuto.Enabled };
+        shelfItem.CheckedChanged += (_, _) => _shelfAuto.Enabled = shelfItem.Checked;
         menu.Items.Add(shelfItem);
 
         menu.Items.Add("Настройки…", null, (_, _) => OpenSettings());

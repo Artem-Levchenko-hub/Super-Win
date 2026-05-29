@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 
 namespace PravVyd.Ui;
 
@@ -11,6 +13,9 @@ public partial class ShelfWindow : Window
 {
     private Point _dragStart;
     private Border? _pressed;
+    private readonly DispatcherTimer _retract;
+    private double _shownLeft;
+    private double _hiddenLeft;
 
     public ShelfWindow()
     {
@@ -18,13 +23,54 @@ public partial class ShelfWindow : Window
 
         var area = SystemParameters.WorkArea;
         Height = area.Height * 0.55;
-        Left = area.Right - Width;
         Top = area.Top + (area.Height - Height) / 2;
+        _shownLeft = area.Right - Width;
+        _hiddenLeft = area.Right + 4; // полностью за правым краём — не видно и не ловит клики
+        Left = _hiddenLeft;           // старт: спрятана
+
+        // прячем не сразу на отпускании мыши, а чуть погодя — чтобы успел долететь drop на полку
+        _retract = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(320) };
+        _retract.Tick += (_, _) =>
+        {
+            _retract.Stop();
+            if (IsEmpty)
+                SlideOut();
+        };
 
         AllowDrop = true;
         DragEnter += OnDragOver;
         DragOver += OnDragOver;
         Drop += OnDrop;
+    }
+
+    public bool IsEmpty => Items.Children.Count == 0;
+
+    /// <summary>Плавно выехать из-за правого края.</summary>
+    public void SlideIn()
+    {
+        _retract.Stop();
+        Visibility = Visibility.Visible;
+        Topmost = true;
+        AnimateLeft(_shownLeft);
+    }
+
+    /// <summary>Плавно уехать за правый край.</summary>
+    public void SlideOut() => AnimateLeft(_hiddenLeft);
+
+    /// <summary>Запросить авто-скрытие: уедет через момент, если полка пуста.</summary>
+    public void RequestRetract()
+    {
+        _retract.Stop();
+        _retract.Start();
+    }
+
+    private void AnimateLeft(double to)
+    {
+        var anim = new DoubleAnimation(to, TimeSpan.FromMilliseconds(220))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        };
+        BeginAnimation(LeftProperty, anim);
     }
 
     private static void OnDragOver(object sender, DragEventArgs e)
@@ -42,6 +88,7 @@ public partial class ShelfWindow : Window
             AddChip(path);
 
         UpdateHint();
+        SlideIn(); // дроп прилетел — точно показываем и отменяем авто-скрытие
     }
 
     private void AddChip(string path)
@@ -91,6 +138,8 @@ public partial class ShelfWindow : Window
             e.Handled = true;
             Items.Children.Remove(chip);
             UpdateHint();
+            if (IsEmpty)
+                RequestRetract(); // опустела — уедет за край
         };
 
         Items.Children.Add(chip);
