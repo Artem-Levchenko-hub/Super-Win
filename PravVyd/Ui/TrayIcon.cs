@@ -97,6 +97,29 @@ public sealed class TrayIcon : IDisposable
         _icon.ShowBalloonTip(2000);
     }
 
+    /// <summary>Балун «есть обновление»; клик по нему открывает страницу релиза в браузере.</summary>
+    public void ShowUpdate(string version, string url)
+    {
+        _icon.BalloonTipTitle = "Доступно обновление";
+        _icon.BalloonTipText = $"Версия {version} — нажмите, чтобы открыть страницу загрузки";
+
+        void OnClick(object? sender, EventArgs e)
+        {
+            _icon.BalloonTipClicked -= OnClick;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch
+            {
+                // браузер не открылся — не критично
+            }
+        }
+
+        _icon.BalloonTipClicked += OnClick;
+        _icon.ShowBalloonTip(8000);
+    }
+
     public void Dispose()
     {
         _icon.Visible = false;

@@ -66,6 +66,9 @@ public partial class App : Application
 
         // Ctrl+Shift+T — открыть заново последнюю закрытую папку Проводника
         _recentClosed = new RecentlyClosedService(_hotkeys, _tray.Notify);
+
+        // проверка обновлений: спросить последний GitHub Release, новее текущей → балун в трее
+        new UpdateChecker((version, url) => _tray.ShowUpdate(version, url)).CheckInBackground();
     }
 
     protected override void OnExit(ExitEventArgs e)
