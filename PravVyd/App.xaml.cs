@@ -19,6 +19,7 @@ public partial class App : Application
     private QuickLookService _quicklook = null!;
     private RecentlyClosedService _recentClosed = null!;
     private ShelfWindow _shelf = null!;
+    private AutoLayoutService _autoLayout = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -45,7 +46,10 @@ public partial class App : Application
         _shelf = new ShelfWindow();
         _shelf.Show();
 
-        _tray = new TrayIcon(_settings, _store, _bubble, _watcher, _shelf);
+        // авто-раскладка по пробелу (Punto-style, на словарях): ghbdtn↔привет, руддщ↔hello + смена раскладки
+        _autoLayout = new AutoLayoutService(_settings, new WordDictionary());
+
+        _tray = new TrayIcon(_settings, _store, _bubble, _watcher, _shelf, _autoLayout);
 
         // глобальные хоткеи: Ctrl+Alt+T — закреп окна поверх; Ctrl+Alt+O — OCR области экрана
         _hotkeys = new GlobalHotkeys();
@@ -65,6 +69,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _recentClosed?.Dispose();
+        _autoLayout?.Dispose();
         _quicklook?.Dispose();
         _pinner?.Dispose();
         _hotkeys?.Dispose();

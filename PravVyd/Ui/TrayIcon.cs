@@ -15,14 +15,16 @@ public sealed class TrayIcon : IDisposable
     private readonly BubbleWindow _bubble;
     private readonly SelectionWatcher _watcher;
     private readonly System.Windows.Window _shelfWindow;
+    private readonly AutoLayoutService _autoLayout;
 
-    public TrayIcon(AppSettings settings, SettingsStore store, BubbleWindow bubble, SelectionWatcher watcher, System.Windows.Window shelf)
+    public TrayIcon(AppSettings settings, SettingsStore store, BubbleWindow bubble, SelectionWatcher watcher, System.Windows.Window shelf, AutoLayoutService autoLayout)
     {
         _settings = settings;
         _store = store;
         _bubble = bubble;
         _watcher = watcher;
         _shelfWindow = shelf;
+        _autoLayout = autoLayout;
 
         var menu = new ContextMenuStrip();
         menu.Items.Add("Включить / выключить всплывание", null, (_, _) => ToggleFeature());
@@ -37,6 +39,20 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(new ToolStripMenuItem("Превью файла: Пробел (в Проводнике)") { Enabled = false });
         menu.Items.Add(new ToolStripMenuItem("Вернуть закрытую папку: Ctrl+Shift+T") { Enabled = false });
         menu.Items.Add(new ToolStripMenuItem("Исправить раскладку: Ctrl+Alt+R") { Enabled = false });
+
+        var autoLayoutItem = new ToolStripMenuItem("Авто-раскладка по пробелу (ghbdtn→привет)")
+        {
+            CheckOnClick = true,
+            Checked = _autoLayout.Enabled,
+        };
+        autoLayoutItem.CheckedChanged += (_, _) =>
+        {
+            _autoLayout.Enabled = autoLayoutItem.Checked;
+            _settings.AutoLayoutFix = autoLayoutItem.Checked;
+            _store.Save(_settings);
+        };
+        menu.Items.Add(autoLayoutItem);
+
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Выход", null, (_, _) => WpfApp.Current.Shutdown());
 

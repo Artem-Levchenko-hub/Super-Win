@@ -22,4 +22,7 @@ public sealed class AppSettings
     public string? CustomOutputFolder { get; set; }
 
     public bool AutoStart { get; set; }
+
+    /// <summary>Авто-исправление раскладки по пробелу (Punto-style).</summary>
+    public bool AutoLayoutFix { get; set; } = true;
 }

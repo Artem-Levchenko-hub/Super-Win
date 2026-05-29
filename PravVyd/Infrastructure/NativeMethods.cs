@@ -192,4 +192,25 @@ internal static class NativeMethods
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+    // --- Авто-исправление раскладки (Punto-style): Unicode-ввод, Backspace, переключение раскладки ---
+    public const uint KEYEVENTF_UNICODE = 0x0004;
+    public const ushort VK_BACK = 0x08;
+    public const int VK_SHIFT = 0x10;
+    public const int VK_CAPITAL = 0x14;
+    public const int LLKHF_INJECTED = 0x10;
+    public const uint WM_INPUTLANGCHANGEREQUEST = 0x0050;
+
+    [DllImport("user32.dll")]
+    public static extern short GetKeyState(int nVirtKey);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetKeyboardLayout(uint idThread);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetKeyboardLayoutList(int nBuff, [Out] IntPtr[] lpList);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 }

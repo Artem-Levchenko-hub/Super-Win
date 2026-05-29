@@ -32,7 +32,7 @@ public static class ExplorerSelection
                     return null;
 
                 string path = items.Item(0).Path;
-                return System.IO.File.Exists(path) ? path : null;
+                return System.IO.File.Exists(path) || System.IO.Directory.Exists(path) ? path : null;
             }
         }
         catch

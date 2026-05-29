@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -37,6 +38,12 @@ public partial class PreviewWindow : Window
     {
         try
         {
+            if (Directory.Exists(path))
+            {
+                ShowFolder(path);
+                return;
+            }
+
             var ext = Path.GetExtension(path).ToLowerInvariant();
 
             if (Array.IndexOf(ImageExtensions, ext) >= 0)
@@ -153,6 +160,128 @@ public partial class PreviewWindow : Window
             Content = panel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         });
+    }
+
+    private void ShowFolder(string path)
+    {
+        DirectoryInfo[] dirs;
+        FileInfo[] files;
+        try
+        {
+            var info = new DirectoryInfo(path);
+            dirs = info.GetDirectories();
+            files = info.GetFiles();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage("Нет доступа к папке: " + ex.Message);
+            return;
+        }
+
+        var panel = new StackPanel { Margin = new Thickness(4) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Папок: {dirs.Length}    Файлов: {files.Length}",
+            Foreground = new SolidColorBrush(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF)),
+            FontFamily = new FontFamily("Segoe UI"),
+            FontSize = 12,
+            Margin = new Thickness(2, 2, 2, 8),
+        });
+
+        const int max = 500;
+        var shown = 0;
+
+        foreach (var d in dirs.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (shown++ >= max) break;
+            panel.Children.Add(MakeRow("\U0001F4C1", d.Name, null));
+        }
+
+        foreach (var f in files.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (shown++ >= max) break;
+            panel.Children.Add(MakeRow("\U0001F4C4", f.Name, FormatSize(f.Length)));
+        }
+
+        if (dirs.Length + files.Length > max)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = "… список обрезан для превью",
+                Foreground = new SolidColorBrush(Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF)),
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 11,
+                Margin = new Thickness(2, 8, 2, 2),
+            });
+        }
+
+        Host.Children.Add(new ScrollViewer
+        {
+            Content = panel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        });
+    }
+
+    private static FrameworkElement MakeRow(string glyph, string name, string? size)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var icon = new TextBlock
+        {
+            Text = glyph,
+            FontSize = 14,
+            Margin = new Thickness(2, 0, 8, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(icon, 0);
+        grid.Children.Add(icon);
+
+        var label = new TextBlock
+        {
+            Text = name,
+            Foreground = Brushes.White,
+            FontFamily = new FontFamily("Segoe UI"),
+            FontSize = 13,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(label);
+
+        if (size is not null)
+        {
+            var sizeText = new TextBlock
+            {
+                Text = size,
+                Foreground = new SolidColorBrush(Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF)),
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 12,
+                Margin = new Thickness(8, 0, 4, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Grid.SetColumn(sizeText, 2);
+            grid.Children.Add(sizeText);
+        }
+
+        return grid;
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = { "Б", "КБ", "МБ", "ГБ", "ТБ" };
+        double size = bytes;
+        var unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+
+        return unit == 0 ? $"{bytes} {units[0]}" : $"{size:0.#} {units[unit]}";
     }
 
     private void ShowMessage(string message)
