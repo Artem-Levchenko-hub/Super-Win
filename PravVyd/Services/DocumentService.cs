@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text;
 using PravVyd.Documents;
 using PravVyd.Infrastructure;
 
@@ -26,14 +28,28 @@ public sealed class DocumentService
 
     public async Task<DocumentResult> CreateFromSelectionAsync(DocFormat format)
     {
-        var text = await _capture.CaptureAsync();
-        if (string.IsNullOrWhiteSpace(text))
+        var captured = await _capture.CaptureRichAsync();
+        if (captured is null || (string.IsNullOrWhiteSpace(captured.Text) && string.IsNullOrWhiteSpace(captured.Html)))
             return DocumentResult.NoSelection();
 
         try
         {
-            var model = TextParser.Parse(text);
             var writer = _writers[format];
+
+            // .md + есть HTML в буфере → переносим оформление выделения в Markdown «как скопировал»
+            if (format == DocFormat.Markdown && !string.IsNullOrWhiteSpace(captured.Html))
+            {
+                var markdown = HtmlToMarkdown.Convert(captured.Html);
+                if (!string.IsNullOrWhiteSpace(markdown))
+                {
+                    var mdPath = _paths.Resolve(writer.Extension, TitleFromMarkdown(markdown));
+                    File.WriteAllText(mdPath, markdown + "\n", new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                    _clipboard.SetFile(mdPath);
+                    return DocumentResult.Ok(mdPath);
+                }
+            }
+
+            var model = TextParser.Parse(captured.Text ?? string.Empty);
             var path = _paths.Resolve(writer.Extension, model.Title);
             writer.Write(model, path);
             _clipboard.SetFile(path);
@@ -43,5 +59,19 @@ public sealed class DocumentService
         {
             return DocumentResult.Failure(ex.Message);
         }
+    }
+
+    private static string TitleFromMarkdown(string markdown)
+    {
+        foreach (var raw in markdown.Split('\n'))
+        {
+            var line = raw.Trim().TrimStart('#', '>', '-', '*', ' ').Trim();
+            if (line.Length == 0)
+                continue;
+
+            return line.Length <= 60 ? line : line[..60].TrimEnd() + "…";
+        }
+
+        return "Документ";
     }
 }

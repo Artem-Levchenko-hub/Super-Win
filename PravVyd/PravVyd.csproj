@@ -12,7 +12,7 @@
     <AssemblyName>PravVyd</AssemblyName>
     <RootNamespace>PravVyd</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Product>Правильный выделяльщик</Product>
     <!-- WinForms DPI bootstrap (SetHighDpiMode) never runs — нет WinForms message loop, только NotifyIcon. DPI задаёт WPF через манифест. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
@@ -27,6 +27,12 @@
   <ItemGroup>
     <PackageReference Include="QuestPDF" Version="2024.12.3" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.1.0" />
+    <!-- рендер html «как сайт» и svg через движок Edge Chromium -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
+    <!-- Markdown → HTML для оформленного превью .md -->
+    <PackageReference Include="Markdig" Version="0.*" />
+    <!-- HTML (из буфера) → Markdown: сохраняем оформление выделения при генерации .md -->
+    <PackageReference Include="ReverseMarkdown" Version="4.*" />
   </ItemGroup>
 
   <ItemGroup>

@@ -52,7 +52,8 @@ public sealed class QuickLookService : IDisposable
 
         // в самом хуке — только быстрые проверки. COM/Shell выносим в Dispatcher,
         // иначе медленный колбэк превысит LowLevelHooksTimeout и Windows снимет хук
-        if (!IsExplorer(NativeMethods.GetForegroundWindow()))
+        var foreground = NativeMethods.GetForegroundWindow();
+        if (!IsExplorer(foreground) && !IsDesktop(foreground))
             return false;
 
         _spaceHeld = true;
@@ -72,15 +73,24 @@ public sealed class QuickLookService : IDisposable
 
     private void OpenFromSelection()
     {
-        var path = ExplorerSelection.GetSelectedFile(NativeMethods.GetForegroundWindow());
+        var foreground = NativeMethods.GetForegroundWindow();
+        var path = IsDesktop(foreground)
+            ? ExplorerSelection.GetDesktopSelectedFile()
+            : ExplorerSelection.GetSelectedFile(foreground);
         if (path is null)
             return;
 
         ClosePreview();
-        _preview = new PreviewWindow(path);
-        _preview.Closed += (_, _) => _preview = null;
-        _preview.Show();
-        _preview.Activate();
+        var preview = new PreviewWindow(path);
+        // закрытие анимировано (отложено) — обнуляем поле только если оно всё ещё указывает на это окно
+        preview.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_preview, preview))
+                _preview = null;
+        };
+        _preview = preview;
+        preview.Show();
+        preview.Activate();
     }
 
     private void ClosePreview()
@@ -95,6 +105,14 @@ public sealed class QuickLookService : IDisposable
         NativeMethods.GetClassName(hwnd, className, className.Capacity);
         var name = className.ToString();
         return name is "CabinetWClass" or "ExploreWClass";
+    }
+
+    private static bool IsDesktop(IntPtr hwnd)
+    {
+        var className = new StringBuilder(64);
+        NativeMethods.GetClassName(hwnd, className, className.Capacity);
+        var name = className.ToString();
+        return name is "Progman" or "WorkerW";
     }
 
     public void Dispose()
